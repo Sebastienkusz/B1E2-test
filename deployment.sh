@@ -136,7 +136,7 @@ az network public-ip update \
 #OS Disk VM Bastion Variables
 OSDiskBastion=$PreName"VM-Bastion-OS-Disk"
 # S4 for 32 Go HDD Standard
-OSDiskBastionSize="S4"
+OSDiskBastionSku="Standard_LRS"
 OSDiskBastionSizeGB="30"
 
 #OS Disk VM Bastion Creation
@@ -147,13 +147,13 @@ az disk create \
   --architecture x64 \
   --os-type linux \
   --size-gb $OSDiskBastionSizeGB \
-  --tier $OSDiskBastionSize \
+  --sku $OSDiskBastionSku \
   --zone $Zone
 
 #OS Disk VM Application Variables
 OSDiskAppli=$PreName"VM-Appli-OS-Disk"
 # E4 for 32 Go SSD Standard
-OSDiskAppliSize="E4"
+OSDiskAppliSku="StandardSSD_LRS"
 OSDiskAppliSizeGB="30"
 
 #OS Disk VM Application Creation
@@ -164,23 +164,23 @@ az disk create \
   --architecture x64 \
   --os-type linux \
   --size-gb $OSDiskAppliSizeGB \
-  --tier $OSDiskAppliSize \
+  --sku $OSDiskAppliSku \
   --zone $Zone
 
 #Data Disk VM Application Variables
 DataDiskAppli=$PreName"VM-Appli-Data-Disk"
 # E6 for 64 Go SSD Standard
-DataDiskAppliSize="E6"
+DataDiskAppliSku="StandardSSD_LRS"
+DataDiskAppliSizeGB="64"
 
 #Data Disk VM Application Creation
 echo "Data Disk VM Application Creation"
-az disk create \
-  -–resource-group $ResourceGroup \
-  -–name $DataDiskAppli \
-  -–architecture x64 \
-  -–os-type linux \
-  -–tier $DataDiskAppliSize \
-  -–zone $Zone
+#az disk create \
+#  --resource-group $ResourceGroup \
+#  --name $DataDiskAppli \
+#  --size-gb $DataDiskAppliSizeGB \
+#  -–sku $DataDiskAppliSku \
+#  -–zone $Zone
 
   # Key Vault Variables
 KeyVaultName=$PreName"KeyVault"
@@ -201,10 +201,9 @@ SshKey=$PreName"VM-SSH-key"
 echo "SSH Key Creation"
 az sshkey create \
   -–resource-group $ResourceGroup \
-  -–location $Location \
-  -–public-key “{ssh-rsa public key}” \
-  -–name $SshKey
-
+  -–name $SshKey \
+  -–location $Location
+  
 # VM Bastion Variables
 BastionName=$PreName"VM-Bastion"
 ImageOs="Ubuntu2204"	# 0001-com-ubuntu-server-focal:22_04-lts-gen2
@@ -223,5 +222,5 @@ az vm create \
   --subnet $Subnet\
   --public-ip-address $BastionIPName \
   --admin-username $BastionUserName \
-  -–ssh-key-name $SshKey \
+  -–ssh-key-name "W-B1E2-VM-SSH-Key" \
   --no-wait
