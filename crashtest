@@ -1,0 +1,1 @@
+az disk create --name "W-B1E2-VM-Appli-Data-Disk" --resource-group "Sebastien_K" --encryption-type "EncryptionAtRestWithPlatformKey" --architecture "x64" --os-type "linux" --size-gb "64" -–sku "StandardSSD_LRS" -–zone 3

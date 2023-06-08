@@ -25,7 +25,7 @@ az network vnet create \
   --subnet-name $Subnet \
   --subnet-prefixes $AdresseStart$SubnetRange
 
-#NSG VM Bastion Variables
+# NSG VM Bastion Variables
 NsgBastionName=$PreName"NSG-Bastion"
 
 # Create a network security group for Bastion
@@ -139,33 +139,33 @@ OSDiskBastion=$PreName"VM-Bastion-OS-Disk"
 OSDiskBastionSku="Standard_LRS"
 OSDiskBastionSizeGB="30"
 
-#OS Disk VM Bastion Creation
-echo "OS Disk VM Bastion Creation"
-az disk create \
-  --resource-group $ResourceGroup \
-  --name $OSDiskBastion \
-  --architecture x64 \
-  --os-type linux \
-  --size-gb $OSDiskBastionSizeGB \
-  --sku $OSDiskBastionSku \
-  --zone $Zone
+# #OS Disk VM Bastion Creation
+# echo "OS Disk VM Bastion Creation"
+# az disk create \
+#   --resource-group $ResourceGroup \
+#   --name $OSDiskBastion \
+#   --architecture "x64" \
+#   --os-type "linux" \
+#   --size-gb $OSDiskBastionSizeGB \
+#   --sku $OSDiskBastionSku \
+#   --zone $Zone
 
-#OS Disk VM Application Variables
-OSDiskAppli=$PreName"VM-Appli-OS-Disk"
-# E4 for 32 Go SSD Standard
-OSDiskAppliSku="StandardSSD_LRS"
-OSDiskAppliSizeGB="30"
+# #OS Disk VM Application Variables
+# OSDiskAppli=$PreName"VM-Appli-OS-Disk"
+# # E4 for 32 Go SSD Standard
+# OSDiskAppliSku="StandardSSD_LRS"
+# OSDiskAppliSizeGB="30"
 
-#OS Disk VM Application Creation
-echo "OS Disk VM Application Creation"
-az disk create \
-  --resource-group $ResourceGroup \
-  --name $OSDiskAppli \
-  --architecture x64 \
-  --os-type linux \
-  --size-gb $OSDiskAppliSizeGB \
-  --sku $OSDiskAppliSku \
-  --zone $Zone
+# #OS Disk VM Application Creation
+# echo "OS Disk VM Application Creation"
+# az disk create \
+#   --resource-group $ResourceGroup \
+#   --name $OSDiskAppli \
+#   --architecture "x64" \
+#   --os-type "linux" \
+#   --size-gb $OSDiskAppliSizeGB \
+#   --sku $OSDiskAppliSku \
+#   --zone $Zone
 
 #Data Disk VM Application Variables
 DataDiskAppli=$PreName"VM-Appli-Data-Disk"
@@ -175,52 +175,124 @@ DataDiskAppliSizeGB="64"
 
 #Data Disk VM Application Creation
 echo "Data Disk VM Application Creation"
-#az disk create \
-#  --resource-group $ResourceGroup \
-#  --name $DataDiskAppli \
-#  --size-gb $DataDiskAppliSizeGB \
-#  -–sku $DataDiskAppliSku \
-#  -–zone $Zone
+az disk create \
+ --name $DataDiskAppli \
+ --resource-group $ResourceGroup \
+ --encryption-type "EncryptionAtRestWithPlatformKey" \
+ --architecture "x64" \
+ --os-type "linux" \
+ --size-gb $DataDiskAppliSizeGB \
+ --sku $DataDiskAppliSku \
+ --zone $Zone
 
-  # Key Vault Variables
-KeyVaultName=$PreName"KeyVault"
+# # Key Vault Variables
+# KeyVaultName=$PreName"KeyVault"
 
-# Key Vault Creation
-echo "Key Vault Creation"
-az keyvault create \
-  --resource-group $ResourceGroup \
-  --location $Location \
-  --name $KeyVaultName \
-  --enabled-for-disk-encryption
-#–secure-vm-disk-encryption-set
+# # Key Vault Creation
+# echo "Key Vault Creation"
+# az keyvault create \
+#   --resource-group $ResourceGroup \
+#   --location $Location \
+#   --name $KeyVaultName \
+#   --enabled-for-disk-encryption
+# #–secure-vm-disk-encryption-set
 
-# SSH key Variables
-SshKey=$PreName"VM-SSH-key"
+# # # SSH key Variables
+# KeyName=$PreName"VM-SSH-keytest"
+# SshKeyName=$PreName"rsa"
+# SshPublicKeyPath="/home/"$USER"/.ssh/"
+# SshKeyMail="kusz.sebastien@gmail.com"
 
 # SSH Key Creation
-echo "SSH Key Creation"
-az sshkey create \
-  -–resource-group $ResourceGroup \
-  -–name $SshKey \
-  -–location $Location
-  
+# echo "SSH Key Creation"
+# az sshkey create \
+#   --resource-group $ResourceGroup \
+#   --name $KeyName \
+#   --location $Location \
+#   --tag key[tototiti]
+
+# ssh-keygen -t rsa -b 4096 -N '' -C "$SshKeyMail" -f "$SshPublicKeyPath$SshKeyName"
+
+# Get public key content
+# SshPublicKeyContent=$(cat "$SshPublicKeyPath$SshKeyName.pub")
+# echo $SshPublicKeyContent
+
+# Creation key in key vault
+# az keyvault key create \
+#   --name $KeyName \
+#   --vault-name $KeyVaultName \
+#   --kty RSA \
+#   --ops encrypt decrypt sign verify wrapKey unwrapKey \
+#   --protection software \
+#   --size 4096 \
+#   --disabled false
+
+# # Import key in key vault
+# az keyvault key import \
+#   --vault-name $KeyVaultName \
+#   --disabled false \
+#   --protection software \
+#   --kty RSA \
+#   --name $KeyName \
+#   --byok-file $SshPublicKeyPath$SshKeyName \
+#   --ops encrypt decrypt sign verify wrapKey unwrapKey
+
+# RSA SSH Variables
+
+# RSA SSH Creation
+SshKeyName=$PreName"Gen"
+read -p "Adresse e-mail : " SshKeyMail
+
+ssh-keygen -t rsa -b 4096 -N '' -C $SshKeyMail -f "/home/$USER/.ssh/"$SshKeyName"_rsa"
+
+# Add ssh ket to ssh agent
+eval "$(ssh-agent -s)"
+ssh-add "/home/$USER/.ssh/"$SshKeyName"_rsa"
+
+# Change ssh keys permissions
+# sudo chmod 600 /home/$USER/.ssh/"$SshLocateKeyName"_rsa
+# sudo chmod 644 /home/$USER/.ssh/"$SshLocateKeyName"_rsa.pub
+
+# SSH Config file Create/Add
+BastionUserName="nextcloud"
+echo -e "\nHost client-environment-$BastionUserName\n  IdentityFile ~/.ssh/"$SshKeyName"_rsa \n  ForwardAgent yes" >> /home/$USER/.ssh/config
+
+cat /home/$USER/.ssh/config
+
 # VM Bastion Variables
 BastionName=$PreName"VM-Bastion"
 ImageOs="Ubuntu2204"	# 0001-com-ubuntu-server-focal:22_04-lts-gen2
-BastionUserName="nextcloud"
 BastionVMSize="Standard_B2s"
 
 #VM Bastion Creation
 echo "VM Bastion Creation"
 az vm create \
   --resource-group $ResourceGroup \
-  --attach-os-disk $OSDiskBastion \
   --name $BastionName \
   --size $BastionVMSize \
   --image $ImageOs \
-  --nics $Nic \
+  --vnet-name $VNet \
   --subnet $Subnet\
+  --nsg $NsgBastionName \
   --public-ip-address $BastionIPName \
   --admin-username $BastionUserName \
-  -–ssh-key-name "W-B1E2-VM-SSH-Key" \
-  --no-wait
+  --ssh-key-values "/home/$USER/.ssh/"$SshKeyName"_rsa.pub" \
+  --zone $Zone
+
+# VM Application Variables
+export AppliName=$PreName"VM-Appli"
+export AppliUserName="appli"
+export AppliVMSize="Standard_D2s_v3"
+
+#VM Application Creation
+az vm create \
+  --resource-group $ResourceGroup \
+  --attach-data-disks $DataDiskAppli \
+  --name $AppliName \
+  --size $AppliVMSize \
+  --image $ImageOs \
+  --public-ip-address $AppliIPName \
+  --admin-username $AppliUserName \
+  --ssh-key-values "/home/$USER/.ssh/"$SshKeyName"_rsa.pub" \
+  --zone $Zone
+
