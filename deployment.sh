@@ -16,128 +16,128 @@ NetworkRange="/16"
 Subnet=$PreName"Subnet-Nextcloud"
 SubnetRange="/29"
 
-# # Virtual Network and subnet Creation
-# # echo "Virtual Network and subnet Creation"
-# az network vnet create \
-#   --name $VNet \
-#   --resource-group $ResourceGroup \
-#   --address-prefix $AdresseStart$NetworkRange \
-#   --subnet-name $Subnet \
-#   --subnet-prefixes $AdresseStart$SubnetRange
+# Virtual Network and subnet Creation
+echo "Virtual Network and subnet Creation"
+az network vnet create \
+  --name $VNet \
+  --resource-group $ResourceGroup \
+  --address-prefix $AdresseStart$NetworkRange \
+  --subnet-name $Subnet \
+  --subnet-prefixes $AdresseStart$SubnetRange
 
-# # NSG VM Bastion Variables
-# NsgBastionName=$PreName"NSG-Bastion"
+# NSG VM Bastion Variables
+NsgBastionName=$PreName"NSG-Bastion"
 
-# # Create a network security group for Bastion
-# echo "Create a network security group for Bastion"
-# az network nsg create \
-#   --resource-group $ResourceGroup \
-#   --name $NsgBastionName
+# Create a network security group for Bastion
+echo "Create a network security group for Bastion"
+az network nsg create \
+  --resource-group $ResourceGroup \
+  --name $NsgBastionName
 
-# #NSG Rules VM Bastion Variables
-# NsgBastionRules=$PreName"NSG-Rules-Bastion"
+#NSG Rules VM Bastion Variables
+NsgBastionRules=$PreName"NSG-Rules-Bastion"
 
-# # Create Rules in network security group for Bastion
-# echo "Create Rules in network security group for Bastion"
-# az network nsg rule create \
-#   --resource-group $ResourceGroup \
-#   --nsg-name $NsgBastionName \
-#   --name Allow-SSH-All \
-#   --access Allow \
-#   --protocol Tcp \
-#   --direction Inbound \
-#   --priority 110 \
-#   --source-port-range "*" \
-#   --destination-port-range 10022
+# Create Rules in network security group for Bastion
+echo "Create Rules in network security group for Bastion"
+az network nsg rule create \
+  --resource-group $ResourceGroup \
+  --nsg-name $NsgBastionName \
+  --name Allow-SSH-All \
+  --access Allow \
+  --protocol Tcp \
+  --direction Inbound \
+  --priority 110 \
+  --source-port-range "*" \
+  --destination-port-range 10022
 
-# #NSG VM Application Variables
-# NsgAppliName=$PreName"NSG-Appli"
+#NSG VM Application Variables
+NsgAppliName=$PreName"NSG-Appli"
 
-# # Create a network security group for Application
-# echo "Create a network security group for Application"
-# az network nsg create \
-#   --resource-group $ResourceGroup \
-#   --name $NsgAppliName
+# Create a network security group for Application
+echo "Create a network security group for Application"
+az network nsg create \
+  --resource-group $ResourceGroup \
+  --name $NsgAppliName
 
-# #NSG Rules VM Appli Variables
-# NsgAppliRules=$PreName"NSG-Rules-Appli"
+#NSG Rules VM Appli Variables
+NsgAppliRules=$PreName"NSG-Rules-Appli"
 
-# # Create Rules in network security group for Application
-# echo "Create Rules in network security group for Application"
-# az network nsg rule create \
-#   --resource-group $ResourceGroup \
-#   --nsg-name $NsgAppliName \
-#   --name Allow-SSH-All \
-#   --access Allow \
-#   --protocol Tcp \
-#   --direction Inbound \
-#   --priority 110 \
-#   --source-address-prefix Internet \
-#   --source-port-range "*" \
-#   --destination-port-range 22
+# Create Rules in network security group for Application
+echo "Create Rules in network security group for Application"
+az network nsg rule create \
+  --resource-group $ResourceGroup \
+  --nsg-name $NsgAppliName \
+  --name Allow-SSH-All \
+  --access Allow \
+  --protocol Tcp \
+  --direction Inbound \
+  --priority 110 \
+  --source-address-prefix Internet \
+  --source-port-range "*" \
+  --destination-port-range 22
 
-# #Public IP VM Bastion Variables
-# Nic=$PreName"Nic"
+#Public IP VM Bastion Variables
+Nic=$PreName"Nic"
 
-# #Public IP VM Bastion Creation
-# echo "Public IP VM Bastion Creation"
-# az network nic create \
-#     --resource-group $ResourceGroup \
-#     --name $Nic \
-#     --vnet-name $VNet \
-#     --subnet $Subnet
+#Public IP VM Bastion Creation
+echo "Public IP VM Bastion Creation"
+az network nic create \
+    --resource-group $ResourceGroup \
+    --name $Nic \
+    --vnet-name $VNet \
+    --subnet $Subnet
 
-# #Public IP VM Bastion Variables
-# BastionIPName=$PreName"VM-Bastion-IP"
+#Public IP VM Bastion Variables
+BastionIPName=$PreName"VM-Bastion-IP"
 
-# #Public IP VM Bastion Creation
-# echo "Public IP VM Bastion Creation"
-# az network public-ip create \
-#     --resource-group $ResourceGroup \
-#     --name $BastionIPName \
-#     --version IPv4 \
-#     --sku Standard \
-#     --zone $Zone
+#Public IP VM Bastion Creation
+echo "Public IP VM Bastion Creation"
+az network public-ip create \
+    --resource-group $ResourceGroup \
+    --name $BastionIPName \
+    --version IPv4 \
+    --sku Standard \
+    --zone $Zone
 
-# #Public IP VM Application Variables
-# AppliIPName=$PreName"VM-Appli-IP"
+#Public IP VM Application Variables
+AppliIPName=$PreName"VM-Appli-IP"
 
-# #Public IP VM Application Creation
-# echo "Public IP VM Application Creation"
-# az network public-ip create \
-#     --resource-group $ResourceGroup \
-#     --name $AppliIPName \
-#     --version IPv4 \
-#     --sku Standard \
-#     --zone $Zone
+#Public IP VM Application Creation
+echo "Public IP VM Application Creation"
+az network public-ip create \
+    --resource-group $ResourceGroup \
+    --name $AppliIPName \
+    --version IPv4 \
+    --sku Standard \
+    --zone $Zone
 
-# # Label Public IP VM Bastion Variables
-# LabelBastionIPName="esan-preproduction-bastion"
+# Label Public IP VM Bastion Variables
+LabelBastionIPName="esan-preproduction-bastion"
 
-# # Label Public IP VM Bastion Update
-# echo "Label Public IP VM Bastion Update"
-# az network public-ip update \
-#  --resource-group $ResourceGroup \
-#  --name $BastionIPName \
-#  --dns-name $LabelBastionIPName \
-#  --allocation-method Static
+# Label Public IP VM Bastion Update
+echo "Label Public IP VM Bastion Update"
+az network public-ip update \
+ --resource-group $ResourceGroup \
+ --name $BastionIPName \
+ --dns-name $LabelBastionIPName \
+ --allocation-method Static
 
-#  # Label Public IP VM Application Variables
-# LabelAppliIPName="esan-preproduction-nextcloud"
+ # Label Public IP VM Application Variables
+LabelAppliIPName="esan-preproduction-nextcloud"
 
-# # Label Public IP VM Application Update
-# echo "Label Public IP VM Application Update"
-# az network public-ip update \
-#  --resource-group $ResourceGroup \
-#  --name $AppliIPName \
-#  --dns-name $LabelAppliIPName \
-#  --allocation-method Static
+# Label Public IP VM Application Update
+echo "Label Public IP VM Application Update"
+az network public-ip update \
+ --resource-group $ResourceGroup \
+ --name $AppliIPName \
+ --dns-name $LabelAppliIPName \
+ --allocation-method Static
 
-# #OS Disk VM Bastion Variables
-# OSDiskBastion=$PreName"VM-Bastion-OS-Disk"
-# # S4 for 32 Go HDD Standard
-# OSDiskBastionSku="Standard_LRS"
-# OSDiskBastionSizeGB="30"
+#OS Disk VM Bastion Variables
+OSDiskBastion=$PreName"VM-Bastion-OS-Disk"
+# S4 for 32 Go HDD Standard
+OSDiskBastionSku="Standard_LRS"
+OSDiskBastionSizeGB="30"
 
 # #OS Disk VM Bastion Creation
 # echo "OS Disk VM Bastion Creation"
@@ -167,85 +167,132 @@ SubnetRange="/29"
 #   --sku $OSDiskAppliSku \
 #   --zone $Zone
 
-# #Data Disk VM Application Variables
-# DataDiskAppli=$PreName"VM-Appli-Data-Disk"
-# # E6 for 64 Go SSD Standard
-# DataDiskAppliSku="StandardSSD_LRS"
-# DataDiskAppliSizeGB="64"
+#Data Disk VM Application Variables
+DataDiskAppli=$PreName"VM-Appli-Data-Disk"
+# E6 for 64 Go SSD Standard
+DataDiskAppliSku="StandardSSD_LRS"
+DataDiskAppliSizeGB="64"
 
-# #Data Disk VM Application Creation
-# echo "Data Disk VM Application Creation"
-# az disk create \
-#  --name $DataDiskAppli \
-#  --resource-group $ResourceGroup \
-#  --encryption-type "EncryptionAtRestWithPlatformKey" \
-#  --architecture "x64" \
-#  --os-type "linux" \
-#  --size-gb $DataDiskAppliSizeGB \
-#  --sku $DataDiskAppliSku \
-#  --zone $Zone
+#Data Disk VM Application Creation
+echo "Data Disk VM Application Creation"
+az disk create \
+ --name $DataDiskAppli \
+ --resource-group $ResourceGroup \
+ --encryption-type "EncryptionAtRestWithPlatformKey" \
+ --architecture "x64" \
+ --os-type "linux" \
+ --size-gb $DataDiskAppliSizeGB \
+ --sku $DataDiskAppliSku \
+ --zone $Zone
 
-# Key Vault Variables
-KeyVaultName=$PreName"KeyVault"
+# # Key Vault Variables
+# KeyVaultName=$PreName"KeyVault"
 
-# Key Vault Creation
-echo "Key Vault Creation"
-az keyvault create \
-  --resource-group $ResourceGroup \
-  --location $Location \
-  --name $KeyVaultName \
-  --enabled-for-disk-encryption
-#–secure-vm-disk-encryption-set
+# # Key Vault Creation
+# echo "Key Vault Creation"
+# az keyvault create \
+#   --resource-group $ResourceGroup \
+#   --location $Location \
+#   --name $KeyVaultName \
+#   --enabled-for-disk-encryption
+# #–secure-vm-disk-encryption-set
 
-# SSH key Variables
-KeyName=$PreName"VM-SSH-key"
-SshKeyName=$PreName"rsa"
-SshPublicKeyPath="/home/$USER/.ssh/"
+# # # SSH key Variables
+# KeyName=$PreName"VM-SSH-keytest"
+# SshKeyName=$PreName"rsa"
+# SshPublicKeyPath="/home/"$USER"/.ssh/"
+# SshKeyMail="kusz.sebastien@gmail.com"
 
 # SSH Key Creation
-echo "SSH Key Creation"
+# echo "SSH Key Creation"
 # az sshkey create \
 #   --resource-group $ResourceGroup \
 #   --name $KeyName \
 #   --location $Location \
 #   --tag key[tototiti]
 
-sudo ssh-keygen -y -t rsa -N '' -b 4096 -f $SshPublicKeyPath$SshKeyName
+# ssh-keygen -t rsa -b 4096 -N '' -C "$SshKeyMail" -f "$SshPublicKeyPath$SshKeyName"
 
 # Get public key content
-SshPublicKeyContent=$(sudo cat "$SshPublicKeyPath$SshKeyName")
+# SshPublicKeyContent=$(cat "$SshPublicKeyPath$SshKeyName.pub")
+# echo $SshPublicKeyContent
 
 # Creation key in key vault
-az keyvault key create \
-  --name "$KeyName" \
-  --vault-name "$KeyVaultName" \
-  --resource-group "$ResourceGroup" \
-  --kty RSA-HSM \
-  --ops encrypt decrypt sign verify wrapKey unwrapKey \
-  --protection software \
-  --size 4096 \
-  --tags sshPublicKey="$SshPublicKeyContent" \
-  --ssh-key-type RSA \
-  --ssh-key-usage verify \
-  --disabled false
+# az keyvault key create \
+#   --name $KeyName \
+#   --vault-name $KeyVaultName \
+#   --kty RSA \
+#   --ops encrypt decrypt sign verify wrapKey unwrapKey \
+#   --protection software \
+#   --size 4096 \
+#   --disabled false
 
-# # VM Bastion Variables
-# BastionName=$PreName"VM-Bastion"
-# ImageOs="Ubuntu2204"	# 0001-com-ubuntu-server-focal:22_04-lts-gen2
-# BastionUserName="nextcloud"
-# BastionVMSize="Standard_B2s"
+# # Import key in key vault
+# az keyvault key import \
+#   --vault-name $KeyVaultName \
+#   --disabled false \
+#   --protection software \
+#   --kty RSA \
+#   --name $KeyName \
+#   --byok-file $SshPublicKeyPath$SshKeyName \
+#   --ops encrypt decrypt sign verify wrapKey unwrapKey
 
-# #VM Bastion Creation
-# echo "VM Bastion Creation"
-# az vm create \
-#   --resource-group $ResourceGroup \
-#   --attach-os-disk $OSDiskBastion \
-#   --name $BastionName \
-#   --size $BastionVMSize \
-#   --image $ImageOs \
-#   --nics $Nic \
-#   --subnet $Subnet\
-#   --public-ip-address $BastionIPName \
-#   --admin-username $BastionUserName \
-#   -–ssh-key-name "W-B1E2-VM-SSH-Key" \
-#   --no-wait
+# RSA SSH Variables
+
+# RSA SSH Creation
+SshKeyName=$PreName"Gen"
+read -p "Adresse e-mail : " SshKeyMail
+
+ssh-keygen -t rsa -b 4096 -N '' -C $SshKeyMail -f "/home/$USER/.ssh/"$SshKeyName"_rsa"
+
+# Add ssh ket to ssh agent
+eval "$(ssh-agent -s)"
+ssh-add "/home/$USER/.ssh/"$SshKeyName"_rsa"
+
+# Change ssh keys permissions
+# sudo chmod 600 /home/$USER/.ssh/"$SshLocateKeyName"_rsa
+# sudo chmod 644 /home/$USER/.ssh/"$SshLocateKeyName"_rsa.pub
+
+# SSH Config file Create/Add
+BastionUserName="nextcloud"
+echo -e "\nHost client-environment-$BastionUserName\n  IdentityFile ~/.ssh/"$SshKeyName"_rsa \n  ForwardAgent yes" >> /home/$USER/.ssh/config
+
+cat /home/$USER/.ssh/config
+
+# VM Bastion Variables
+BastionName=$PreName"VM-Bastion"
+ImageOs="Ubuntu2204"	# 0001-com-ubuntu-server-focal:22_04-lts-gen2
+BastionVMSize="Standard_B2s"
+
+#VM Bastion Creation
+echo "VM Bastion Creation"
+az vm create \
+  --resource-group $ResourceGroup \
+  --name $BastionName \
+  --size $BastionVMSize \
+  --image $ImageOs \
+  --vnet-name $VNet \
+  --subnet $Subnet\
+  --nsg $NsgBastionName \
+  --public-ip-address $BastionIPName \
+  --admin-username $BastionUserName \
+  --ssh-key-values "/home/$USER/.ssh/"$SshKeyName"_rsa.pub" \
+  --zone $Zone
+
+# VM Application Variables
+export AppliName=$PreName"VM-Appli"
+export AppliUserName="appli"
+export AppliVMSize="Standard_D2s_v3"
+
+#VM Application Creation
+az vm create \
+  --resource-group $ResourceGroup \
+  --attach-data-disks $DataDiskAppli \
+  --name $AppliName \
+  --size $AppliVMSize \
+  --image $ImageOs \
+  --public-ip-address $AppliIPName \
+  --admin-username $AppliUserName \
+  --ssh-key-values "/home/$USER/.ssh/"$SshKeyName"_rsa.pub" \
+  --zone $Zone
+
