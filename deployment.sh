@@ -48,7 +48,7 @@ az network nsg rule create \
   --direction Inbound \
   --priority 110 \
   --source-port-range "*" \
-  --destination-port-range 10022
+  --destination-port-range 22
 
 #NSG VM Application Variables
 NsgAppliName=$PreName"NSG-Appli"
@@ -72,7 +72,7 @@ az network nsg rule create \
   --protocol Tcp \
   --direction Inbound \
   --priority 110 \
-  --source-address-prefix Internet \
+  --source-address-prefix "*" \
   --source-port-range "*" \
   --destination-port-range 22
 
@@ -133,58 +133,6 @@ az network public-ip update \
  --dns-name $LabelAppliIPName \
  --allocation-method Static
 
-#OS Disk VM Bastion Variables
-OSDiskBastion=$PreName"VM-Bastion-OS-Disk"
-# S4 for 32 Go HDD Standard
-OSDiskBastionSku="Standard_LRS"
-OSDiskBastionSizeGB="30"
-
-# #OS Disk VM Bastion Creation
-# echo "OS Disk VM Bastion Creation"
-# az disk create \
-#   --resource-group $ResourceGroup \
-#   --name $OSDiskBastion \
-#   --architecture "x64" \
-#   --os-type "linux" \
-#   --size-gb $OSDiskBastionSizeGB \
-#   --sku $OSDiskBastionSku \
-#   --zone $Zone
-
-# #OS Disk VM Application Variables
-# OSDiskAppli=$PreName"VM-Appli-OS-Disk"
-# # E4 for 32 Go SSD Standard
-# OSDiskAppliSku="StandardSSD_LRS"
-# OSDiskAppliSizeGB="30"
-
-# #OS Disk VM Application Creation
-# echo "OS Disk VM Application Creation"
-# az disk create \
-#   --resource-group $ResourceGroup \
-#   --name $OSDiskAppli \
-#   --architecture "x64" \
-#   --os-type "linux" \
-#   --size-gb $OSDiskAppliSizeGB \
-#   --sku $OSDiskAppliSku \
-#   --zone $Zone
-
-#Data Disk VM Application Variables
-DataDiskAppli=$PreName"VM-Appli-Data-Disk"
-# E6 for 64 Go SSD Standard
-DataDiskAppliSku="StandardSSD_LRS"
-DataDiskAppliSizeGB="64"
-
-#Data Disk VM Application Creation
-echo "Data Disk VM Application Creation"
-az disk create \
- --name $DataDiskAppli \
- --resource-group $ResourceGroup \
- --encryption-type "EncryptionAtRestWithPlatformKey" \
- --architecture "x64" \
- --os-type "linux" \
- --size-gb $DataDiskAppliSizeGB \
- --sku $DataDiskAppliSku \
- --zone $Zone
-
 # # Key Vault Variables
 # KeyVaultName=$PreName"KeyVault"
 
@@ -240,14 +188,14 @@ az disk create \
 # RSA SSH Variables
 
 # RSA SSH Creation
-SshKeyName=$PreName"Gen"
+SshKeyName=$PreName"Nextcloud"
 read -p "Adresse e-mail : " SshKeyMail
 
 ssh-keygen -t rsa -b 4096 -N '' -C $SshKeyMail -f "/home/$USER/.ssh/"$SshKeyName"_rsa"
 
-# Add ssh ket to ssh agent
-eval "$(ssh-agent -s)"
-ssh-add "/home/$USER/.ssh/"$SshKeyName"_rsa"
+# # Add ssh ket to ssh agent
+# eval "$(ssh-agent -s)"
+# ssh-add "/home/$USER/.ssh/"$SshKeyName"_rsa"
 
 # Change ssh keys permissions
 # sudo chmod 600 /home/$USER/.ssh/"$SshLocateKeyName"_rsa
@@ -255,22 +203,85 @@ ssh-add "/home/$USER/.ssh/"$SshKeyName"_rsa"
 
 # SSH Config file Create/Add
 BastionUserName="nextcloud"
-echo -e "\nHost client-environment-$BastionUserName\n  IdentityFile ~/.ssh/"$SshKeyName"_rsa \n  ForwardAgent yes" >> /home/$USER/.ssh/config
+echo -e "\nHost "$LabelBastionIPName".westeurope.cloudapp.azure.com\n  IdentityFile ~/.ssh/"$SshKeyName"_rsa \n  ForwardAgent yes" >> /home/$USER/.ssh/config
 
-cat /home/$USER/.ssh/config
+#OS Disk VM Bastion Variables
+OSDiskBastion=$PreName"VM-Bastion-OS-Disk"
+# P4 for 32 Go SSD Preminum
+OSDiskBastionSizeGB="30"
+OSDiskBastionSku="Standard_LRS"
+
+#OS Disk VM Bastion Creation
+echo "OS Disk VM Bastion Creation"
+az disk create \
+  --resource-group $ResourceGroup \
+  --name $OSDiskBastion \
+  --architecture "x64" \
+  --os-type "linux" \
+  --encryption-type "EncryptionAtRestWithPlatformKey" \
+  --image-reference "Canonical:0001-com-ubuntu-server-jammy:22_04-lts-gen2:latest" \
+  --size-gb $OSDiskBastionSizeGB \
+  --sku $OSDiskBastionSku \
+  --disk-iops-read-write 500 \
+  --disk-mbps-read-write 60 \
+  --location $Location \
+  --zone $Zone
+
+#OS Disk VM Application Variables
+OSDiskAppli=$PreName"VM-Appli-OS-Disk"
+# P4 for 32 Go SSD Preminum
+OSDiskAppliSizeGB="30"
+OSDiskAppliSku="StandardSSD_LRS"
+
+#OS Disk VM Application Creation
+echo "OS Disk VM Application Creation"
+az disk create \
+  --resource-group $ResourceGroup \
+  --name $OSDiskAppli \
+  --architecture "x64" \
+  --os-type "linux" \
+  --encryption-type "EncryptionAtRestWithPlatformKey" \
+  --image-reference "Canonical:0001-com-ubuntu-server-jammy:22_04-lts-gen2:latest" \
+  --size-gb $OSDiskAppliSizeGB \
+  --sku $OSDiskAppliSku \
+  --disk-iops-read-write 500 \
+  --disk-mbps-read-write 60 \
+  --location $Location \
+  --zone $Zone
+
+#Data Disk VM Application Variables
+DataDiskAppli=$PreName"VM-Appli-Data-Disk"
+# E6 for 64 Go SSD Standard
+DataDiskAppliSizeGB="64"
+DataDiskAppliSku="StandardSSD_LRS"
+
+#Data Disk VM Application Creation
+echo "Data Disk VM Application Creation"
+az disk create \
+  --resource-group $ResourceGroup \
+  --name $DataDiskAppli \
+  --architecture "x64" \
+  --encryption-type "EncryptionAtRestWithPlatformKey" \
+  --size-gb $DataDiskAppliSizeGB \
+  --sku $DataDiskAppliSku \
+  --disk-iops-read-write 500 \
+  --disk-mbps-read-write 60 \
+  --zone $Zone
 
 # VM Bastion Variables
 BastionName=$PreName"VM-Bastion"
-ImageOs="Ubuntu2204"	# 0001-com-ubuntu-server-focal:22_04-lts-gen2
+#ImageOs="Ubuntu2204"	# 0001-com-ubuntu-server-focal:22_04-lts-gen2
 BastionVMSize="Standard_B2s"
 
 #VM Bastion Creation
 echo "VM Bastion Creation"
 az vm create \
   --resource-group $ResourceGroup \
+  --attach-os-disk $OSDiskBastion \
   --name $BastionName \
+  --location $Location \
   --size $BastionVMSize \
-  --image $ImageOs \
+  --os-type linux \
   --vnet-name $VNet \
   --subnet $Subnet\
   --nsg $NsgBastionName \
@@ -287,12 +298,15 @@ export AppliVMSize="Standard_D2s_v3"
 #VM Application Creation
 az vm create \
   --resource-group $ResourceGroup \
+  --attach-os-disk $OSDiskAppli \
   --attach-data-disks $DataDiskAppli \
   --name $AppliName \
   --size $AppliVMSize \
-  --image $ImageOs \
+  --os-type linux \
+  --vnet-name $VNet \
+  --subnet $Subnet\
+  --nsg $NsgAppliName \
   --public-ip-address $AppliIPName \
   --admin-username $AppliUserName \
   --ssh-key-values "/home/$USER/.ssh/"$SshKeyName"_rsa.pub" \
   --zone $Zone
-
