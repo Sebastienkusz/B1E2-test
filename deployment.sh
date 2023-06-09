@@ -1,5 +1,8 @@
 #!/bin/bash
 
+read -p "Nom de l'administrateur principal : " BastionUserName
+read -p "Adresse e-mail de l'administrateur principal : " SshKeyMail
+
 # Variables
 # Resource Group
 ResourceGroup="Sebastien_K"
@@ -67,6 +70,18 @@ echo "Create Rules in network security group for Application"
 az network nsg rule create \
   --resource-group $ResourceGroup \
   --nsg-name $NsgAppliName \
+  --name Allow-SSH-All \
+  --access Allow \
+  --protocol Tcp \
+  --direction Inbound \
+  --priority 110 \
+  --source-address-prefix "*" \
+  --source-port-range "*" \
+  --destination-port-range 22
+
+az network nsg rule create \
+  --resource-group $ResourceGroup \
+  --nsg-name $NsgAppliName \
   --name Allow-HTTP-All \
   --access Allow \
   --protocol Tcp \
@@ -83,7 +98,7 @@ az network nsg rule create \
   --access Allow \
   --protocol Tcp \
   --direction Inbound \
-  --priority 1000 \
+  --priority 1010 \
   --source-address-prefix "*" \
   --source-port-range "*" \
   --destination-port-range 443
@@ -201,7 +216,6 @@ az network public-ip update \
 
 # RSA SSH Creation
 SshKeyName=$PreName"Nextcloud"
-read -p "Adresse e-mail : " SshKeyMail
 
 ssh-keygen -t rsa -b 4096 -N '' -C $SshKeyMail -f "/home/$USER/.ssh/"$SshKeyName"_rsa"
 
@@ -214,8 +228,15 @@ ssh-keygen -t rsa -b 4096 -N '' -C $SshKeyMail -f "/home/$USER/.ssh/"$SshKeyName
 # sudo chmod 644 /home/$USER/.ssh/"$SshLocateKeyName"_rsa.pub
 
 # SSH Config file Create/Add
-BastionUserName="nextcloud"
-echo -e "\nHost "$LabelBastionIPName".westeurope.cloudapp.azure.com\n  IdentityFile ~/.ssh/"$SshKeyName"_rsa \n  ForwardAgent yes" >> /home/$USER/.ssh/config
+
+# echo -e "\nHost "$LabelBastionIPName".westeurope.cloudapp.azure.com\n  IdentityFile ~/.ssh/"$SshKeyName"_rsa \n  ForwardAgent yes" >> $HOME/.ssh/config
+if [ -e $HOME/.ssh/config ]; then
+    if ! cat $HOME/.ssh/config | grep -q "esan-preproduction-nextcloud.westeurope.cloudapp.azure.com"; then
+    echo -e "\nHost esan-preproduction-nextcloud.westeurope.cloudapp.azure.com\n  IdentityFile ~/.ssh/"$SshKeyName"_rsa \n  ForwardAgent yes" >> $HOME/.ssh/config
+    fi
+else
+    echo -e "\nHost esan-preproduction-nextcloud.westeurope.cloudapp.azure.com\n  IdentityFile ~/.ssh/"$SshKeyName"_rsa \n  ForwardAgent yes" >> $HOME/.ssh/config
+fi
 
 #OS Disk VM Bastion Variables
 OSDiskBastion=$PreName"VM-Bastion-OS-Disk"
@@ -324,12 +345,12 @@ az vm create \
   --os-disk-name $OSDiskAppli \
   --os-disk-delete-option "Detach" \
   --os-disk-size-gb $OSDiskAppliSizeGB \
+  --user-data scriptvmappli.sh \
   --vnet-name $VNet \
   --subnet $Subnet\
-  --private-ip-address 10.0.0.5 \
+  --private-ip-address "10.0.0.5" \
   --nsg $NsgAppliName \
   --public-ip-address $AppliIPName \
   --admin-username $AppliUserName \
   --ssh-key-values "/home/$USER/.ssh/"$SshKeyName"_rsa.pub" \
-  --user-data scriptvmappli.sh \
   --zone $Zone

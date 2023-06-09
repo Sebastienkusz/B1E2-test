@@ -9,4 +9,4 @@ sudo systemctl restart sshd
 
 echo "Host appli
   Hostname 10.0.0.5
-  User appli" > /home/nextcloud/.ssh/config
+  User appli" > /home/sebastien/.ssh/config
