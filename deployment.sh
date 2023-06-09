@@ -48,7 +48,7 @@ az network nsg rule create \
   --direction Inbound \
   --priority 110 \
   --source-port-range "*" \
-  --destination-port-range 22
+  --destination-port-range 10022
 
 #NSG VM Application Variables
 NsgAppliName=$PreName"NSG-Appli"
@@ -67,14 +67,26 @@ echo "Create Rules in network security group for Application"
 az network nsg rule create \
   --resource-group $ResourceGroup \
   --nsg-name $NsgAppliName \
-  --name Allow-SSH-All \
+  --name Allow-HTTP-All \
   --access Allow \
   --protocol Tcp \
   --direction Inbound \
-  --priority 110 \
+  --priority 1000 \
   --source-address-prefix "*" \
   --source-port-range "*" \
-  --destination-port-range 22
+  --destination-port-range 80
+
+az network nsg rule create \
+  --resource-group $ResourceGroup \
+  --nsg-name $NsgAppliName \
+  --name Allow-HTTPS-All \
+  --access Allow \
+  --protocol Tcp \
+  --direction Inbound \
+  --priority 1000 \
+  --source-address-prefix "*" \
+  --source-port-range "*" \
+  --destination-port-range 443
 
 #Public IP VM Bastion Variables
 Nic=$PreName"Nic"
@@ -209,45 +221,45 @@ echo -e "\nHost "$LabelBastionIPName".westeurope.cloudapp.azure.com\n  IdentityF
 OSDiskBastion=$PreName"VM-Bastion-OS-Disk"
 # P4 for 32 Go SSD Preminum
 OSDiskBastionSizeGB="30"
-OSDiskBastionSku="Standard_LRS"
+#OSDiskBastionSku="Standard_LRS"
 
-#OS Disk VM Bastion Creation
-echo "OS Disk VM Bastion Creation"
-az disk create \
-  --resource-group $ResourceGroup \
-  --name $OSDiskBastion \
-  --architecture "x64" \
-  --os-type "linux" \
-  --encryption-type "EncryptionAtRestWithPlatformKey" \
-  --image-reference "Canonical:0001-com-ubuntu-server-jammy:22_04-lts-gen2:latest" \
-  --size-gb $OSDiskBastionSizeGB \
-  --sku $OSDiskBastionSku \
-  --disk-iops-read-write 500 \
-  --disk-mbps-read-write 60 \
-  --location $Location \
-  --zone $Zone
+# #OS Disk VM Bastion Creation
+# echo "OS Disk VM Bastion Creation"
+# az disk create \
+#   --resource-group $ResourceGroup \
+#   --name $OSDiskBastion \
+#   --architecture "x64" \
+#   --os-type "linux" \
+#   --encryption-type "EncryptionAtRestWithPlatformKey" \
+#   --image-reference "Canonical:0001-com-ubuntu-server-jammy:22_04-lts-gen2:latest" \
+#   --size-gb $OSDiskBastionSizeGB \
+#   --sku $OSDiskBastionSku \
+#   --disk-iops-read-write 500 \
+#   --disk-mbps-read-write 60 \
+#   --location $Location \
+#   --zone $Zone
 
 #OS Disk VM Application Variables
 OSDiskAppli=$PreName"VM-Appli-OS-Disk"
 # P4 for 32 Go SSD Preminum
 OSDiskAppliSizeGB="30"
-OSDiskAppliSku="StandardSSD_LRS"
+# OSDiskAppliSku="StandardSSD_LRS"
 
 #OS Disk VM Application Creation
-echo "OS Disk VM Application Creation"
-az disk create \
-  --resource-group $ResourceGroup \
-  --name $OSDiskAppli \
-  --architecture "x64" \
-  --os-type "linux" \
-  --encryption-type "EncryptionAtRestWithPlatformKey" \
-  --image-reference "Canonical:0001-com-ubuntu-server-jammy:22_04-lts-gen2:latest" \
-  --size-gb $OSDiskAppliSizeGB \
-  --sku $OSDiskAppliSku \
-  --disk-iops-read-write 500 \
-  --disk-mbps-read-write 60 \
-  --location $Location \
-  --zone $Zone
+# echo "OS Disk VM Application Creation"
+# az disk create \
+#   --resource-group $ResourceGroup \
+#   --name $OSDiskAppli \
+#   --architecture "x64" \
+#   --os-type "linux" \
+#   --encryption-type "EncryptionAtRestWithPlatformKey" \
+#   --image-reference "Canonical:0001-com-ubuntu-server-jammy:22_04-lts-gen2:latest" \
+#   --size-gb $OSDiskAppliSizeGB \
+#   --sku $OSDiskAppliSku \
+#   --disk-iops-read-write 500 \
+#   --disk-mbps-read-write 60 \
+#   --location $Location \
+#   --zone $Zone
 
 #Data Disk VM Application Variables
 DataDiskAppli=$PreName"VM-Appli-Data-Disk"
@@ -270,43 +282,54 @@ az disk create \
 
 # VM Bastion Variables
 BastionName=$PreName"VM-Bastion"
-#ImageOs="Ubuntu2204"	# 0001-com-ubuntu-server-focal:22_04-lts-gen2
+ImageOs="Ubuntu2204"	# 0001-com-ubuntu-server-focal:22_04-lts-gen2
 BastionVMSize="Standard_B2s"
+
 
 #VM Bastion Creation
 echo "VM Bastion Creation"
 az vm create \
   --resource-group $ResourceGroup \
-  --attach-os-disk $OSDiskBastion \
   --name $BastionName \
   --location $Location \
   --size $BastionVMSize \
-  --os-type linux \
+  --image $ImageOs \
+  --os-disk-name $OSDiskBastion \
+  --os-disk-delete-option "Detach" \
+  --os-disk-size-gb $OSDiskBastionSizeGB \
+  --user-data "scriptvmbastion.sh" \
   --vnet-name $VNet \
-  --subnet $Subnet\
+  --subnet $Subnet \
+  --private-ip-address 10.0.0.6 \
   --nsg $NsgBastionName \
   --public-ip-address $BastionIPName \
   --admin-username $BastionUserName \
   --ssh-key-values "/home/$USER/.ssh/"$SshKeyName"_rsa.pub" \
-  --zone $Zone
+  --zone $Zone 
+
 
 # VM Application Variables
-export AppliName=$PreName"VM-Appli"
-export AppliUserName="appli"
-export AppliVMSize="Standard_D2s_v3"
+AppliName=$PreName"VM-Appli"
+AppliUserName="appli"
+AppliVMSize="Standard_D2s_v3"
 
 #VM Application Creation
 az vm create \
   --resource-group $ResourceGroup \
-  --attach-os-disk $OSDiskAppli \
   --attach-data-disks $DataDiskAppli \
   --name $AppliName \
+  --location $Location \
   --size $AppliVMSize \
-  --os-type linux \
+  --image $ImageOs \
+  --os-disk-name $OSDiskAppli \
+  --os-disk-delete-option "Detach" \
+  --os-disk-size-gb $OSDiskAppliSizeGB \
   --vnet-name $VNet \
   --subnet $Subnet\
+  --private-ip-address 10.0.0.5 \
   --nsg $NsgAppliName \
   --public-ip-address $AppliIPName \
   --admin-username $AppliUserName \
   --ssh-key-values "/home/$USER/.ssh/"$SshKeyName"_rsa.pub" \
+  --user-data scriptvmappli.sh \
   --zone $Zone
