@@ -104,10 +104,10 @@ az network nsg rule create \
   --source-port-range "*" \
   --destination-port-range 443
 
-#Public IP VM Bastion Variables
+# Network Interface Card Variables
 Nic=$PreName"Nic"
 
-#Public IP VM Bastion Creation
+# Network Interface Card Creation
 echo "Public IP VM Bastion Creation"
 az network nic create \
     --resource-group $ResourceGroup \
@@ -323,7 +323,7 @@ sudo systemctl restart sshd
 
 echo -e \"
 Host appli
-Hostname "$BastionVMIPprivate"
+  Hostname "$BastionVMIPprivate"
 \" > /home/"$BastionUserName"/.ssh/config
 " > $BastionVMUserData
 
