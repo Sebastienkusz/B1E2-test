@@ -1,5 +1,8 @@
 #!/bin/bash
 
+read -p "Nom de l'administrateur principal (uniquement des petites lettres et sans accent) : " BastionUserName
+read -p "Adresse e-mail de l'administrateur principal : " SshKeyMail
+
 # Variables
 # Resource Group
 ResourceGroup="Sebastien_K"
@@ -36,6 +39,7 @@ az network nsg create \
 
 #NSG Rules VM Bastion Variables
 NsgBastionRules=$PreName"NSG-Rules-Bastion"
+NsgBastionRuleSSHPort="10022"
 
 # Create Rules in network security group for Bastion
 echo "Create Rules in network security group for Bastion"
@@ -48,7 +52,7 @@ az network nsg rule create \
   --direction Inbound \
   --priority 110 \
   --source-port-range "*" \
-  --destination-port-range 10022
+  --destination-port-range $NsgBastionRuleSSHPort
 
 #NSG VM Application Variables
 NsgAppliName=$PreName"NSG-Appli"
@@ -64,6 +68,18 @@ NsgAppliRules=$PreName"NSG-Rules-Appli"
 
 # Create Rules in network security group for Application
 echo "Create Rules in network security group for Application"
+az network nsg rule create \
+  --resource-group $ResourceGroup \
+  --nsg-name $NsgAppliName \
+  --name Allow-SSH-All \
+  --access Allow \
+  --protocol Tcp \
+  --direction Inbound \
+  --priority 110 \
+  --source-address-prefix "*" \
+  --source-port-range "*" \
+  --destination-port-range 22
+
 az network nsg rule create \
   --resource-group $ResourceGroup \
   --nsg-name $NsgAppliName \
@@ -83,7 +99,7 @@ az network nsg rule create \
   --access Allow \
   --protocol Tcp \
   --direction Inbound \
-  --priority 1000 \
+  --priority 1010 \
   --source-address-prefix "*" \
   --source-port-range "*" \
   --destination-port-range 443
@@ -201,7 +217,6 @@ az network public-ip update \
 
 # RSA SSH Creation
 SshKeyName=$PreName"Nextcloud"
-read -p "Adresse e-mail : " SshKeyMail
 
 ssh-keygen -t rsa -b 4096 -N '' -C $SshKeyMail -f "/home/$USER/.ssh/"$SshKeyName"_rsa"
 
@@ -214,8 +229,18 @@ ssh-keygen -t rsa -b 4096 -N '' -C $SshKeyMail -f "/home/$USER/.ssh/"$SshKeyName
 # sudo chmod 644 /home/$USER/.ssh/"$SshLocateKeyName"_rsa.pub
 
 # SSH Config file Create/Add
-BastionUserName="nextcloud"
-echo -e "\nHost "$LabelBastionIPName".westeurope.cloudapp.azure.com\n  IdentityFile ~/.ssh/"$SshKeyName"_rsa \n  ForwardAgent yes" >> /home/$USER/.ssh/config
+
+# echo -e "\nHost "$LabelBastionIPName".westeurope.cloudapp.azure.com\n  IdentityFile ~/.ssh/"$SshKeyName"_rsa \n  ForwardAgent yes" >> $HOME/.ssh/config
+if [ ! -e $HOME/.ssh/config ] || !(grep "$LabelBastionIPName" $HOME/.ssh/config) ; then
+    echo -e "
+Host "$LabelBastionIPName"
+  Hostname "$LabelBastionIPName".westeurope.cloudapp.azure.com
+  User "$BastionUserName"
+  Port "$NsgBastionRuleSSHPort"
+  IdentityFile "$HOME"/.ssh/"$SshKeyName"_rsa
+  ForwardAgent yes
+  " >> $HOME/.ssh/config
+fi
 
 #OS Disk VM Bastion Variables
 OSDiskBastion=$PreName"VM-Bastion-OS-Disk"
@@ -284,7 +309,23 @@ az disk create \
 BastionName=$PreName"VM-Bastion"
 ImageOs="Ubuntu2204"	# 0001-com-ubuntu-server-focal:22_04-lts-gen2
 BastionVMSize="Standard_B2s"
+BastionVMUserData="script-vm-bastion.sh"
+BastionVMIPprivate="10.0.0.5"
 
+# User Data Creation script
+echo -e "
+#!/bin/bash -x
+
+sudo apt update
+
+sudo sed 's/#Port 22/Port 10022/g' -i /etc/ssh/sshd_config
+sudo systemctl restart sshd
+
+echo -e \"
+Host appli
+Hostname "$BastionVMIPprivate"
+\" > /home/"$BastionUserName"/.ssh/config
+" > $BastionVMUserData
 
 #VM Bastion Creation
 echo "VM Bastion Creation"
@@ -297,10 +338,10 @@ az vm create \
   --os-disk-name $OSDiskBastion \
   --os-disk-delete-option "Detach" \
   --os-disk-size-gb $OSDiskBastionSizeGB \
-  --user-data "scriptvmbastion.sh" \
+  --user-data $BastionVMUserData \
   --vnet-name $VNet \
   --subnet $Subnet \
-  --private-ip-address 10.0.0.6 \
+  --private-ip-address $BastionVMIPprivate \
   --nsg $NsgBastionName \
   --public-ip-address $BastionIPName \
   --admin-username $BastionUserName \
@@ -310,8 +351,42 @@ az vm create \
 
 # VM Application Variables
 AppliName=$PreName"VM-Appli"
-AppliUserName="appli"
+AppliUserName=$BastionUserName
 AppliVMSize="Standard_D2s_v3"
+AppliVMUserData="script-vm-appli.sh"
+
+# User Data Creation script
+echo -e "
+#!/bin/bash -x
+
+sudo apt update
+sudo apt -y install wget
+sudo apt -y install bzip2
+
+# Apache installation
+sudo apt -y install apache2
+sudo apt -y install php libapache2-mod-php php-mysql php-xml php-cli php-gd php-curl php-zip php-mbstring php-bcmath
+
+# Application installation
+sudo wget -O /tmp/latest.tar.bz2 https://download.nextcloud.com/server/releases/latest.tar.bz2
+sudo tar -xjvf /tmp/latest.tar.bz2 -C /tmp
+sudo mv /tmp/nextcloud /var/www/
+sudo chown -R www-data:www-data /var/www/nextcloud
+
+echo \"<VirtualHost *:80>
+  ServerAdmin webmaster@localhost
+  DocumentRoot /var/www/nextcloud
+  ErrorLog ${APACHE_LOG_DIR}/error.log
+  CustomLog ${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>\" > /etc/apache2/sites-available/nextcloud.conf
+
+# Configuration
+sudo a2dissite 000-default.conf
+sudo a2ensite nextcloud.conf
+sudo systemctl restart apache2
+
+sudo awk '{ print } \"0 =>\" { print \"1 => '"$LabelAppliIPName".westeurope.cloudapp.azure.com',\" }' /var/www/nextcloud/config/config.php
+" > $AppliVMUserData
 
 #VM Application Creation
 az vm create \
@@ -324,12 +399,12 @@ az vm create \
   --os-disk-name $OSDiskAppli \
   --os-disk-delete-option "Detach" \
   --os-disk-size-gb $OSDiskAppliSizeGB \
+  --user-data $AppliVMUserData \
   --vnet-name $VNet \
   --subnet $Subnet\
-  --private-ip-address 10.0.0.5 \
+  --private-ip-address "10.0.0.5" \
   --nsg $NsgAppliName \
   --public-ip-address $AppliIPName \
   --admin-username $AppliUserName \
   --ssh-key-values "/home/$USER/.ssh/"$SshKeyName"_rsa.pub" \
-  --user-data scriptvmappli.sh \
   --zone $Zone

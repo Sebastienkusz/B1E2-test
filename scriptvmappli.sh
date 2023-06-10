@@ -10,34 +10,16 @@ sudo apt -y install php libapache2-mod-php php-mysql php-xml php-cli php-gd php-
 
 # Application installation
 sudo wget -O /tmp/latest.tar.bz2 https://download.nextcloud.com/server/releases/latest.tar.bz2
-sudo tar -xjvf /tmp/latest.tar.bz2
+sudo tar -xjvf /tmp/latest.tar.bz2 -C /tmp
 sudo mv /tmp/nextcloud /var/www/
 sudo chown -R www-data:www-data /var/www/nextcloud
 
-sudo bash -c "nano >> /etc/apache2/sites-available/nextcloud.conf << EOF
-<VirtualHost *:8080>
-DocumentRoot "/var/www/nextcloud"
-ServerName ip_publique
-<Directory /var/www/nextcloud>
-Require all granted
-AllowOverride All
-Options FollowSymLinks MultiViews
-<IfModule mod_dav.c>
-Dav off
-</IfModule>
-</Directory>
+echo "<VirtualHost *:80>
   ServerAdmin webmaster@localhost
-  
+  DocumentRoot /var/www/nextcloud
   ErrorLog ${APACHE_LOG_DIR}/error.log
   CustomLog ${APACHE_LOG_DIR}/access.log combined
-
-RewriteEngine on
-RewriteCond %{SERVER_NAME} =esan.preproduction.nextcloud.westeurope.cloudapp.azure.com
-RewriteRule ^ https://%{SERVER_NAME}%{REQUEST_URI} [END,NE,R=permanent]
-
-</VirtualHost>
-EOF
-"
+</VirtualHost>" > /etc/apache2/sites-available/nextcloud.conf
 
 # Configuration
 sudo a2dissite 000-default.conf
