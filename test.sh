@@ -16,6 +16,7 @@ then
                 done
         fi
         ssh $LabelBastionIPName "sudo adduser --gecos '' --disabled-password --ingroup sudo "$UserNameTmp
+        
         # sudo ssh-copy-id -i $KeyNameTmp $LabelBastionIPName
         # KeyVarTmp="echo 'cat "$KeyNameTmp"'"
         # sudo ssh -J $LabelBastionIPName $BastionUserName@$BastionVMIPprivate echo $KeyVarTmp >> 
