@@ -104,10 +104,10 @@ az network nsg rule create \
   --source-port-range "*" \
   --destination-port-range 443
 
-#Public IP VM Bastion Variables
+# Network Interface Card Variables
 Nic=$PreName"Nic"
 
-#Public IP VM Bastion Creation
+# Network Interface Card Creation
 echo "Public IP VM Bastion Creation"
 az network nic create \
     --resource-group $ResourceGroup \
@@ -323,7 +323,7 @@ sudo systemctl restart sshd
 
 echo -e \"
 Host appli
-Hostname "$BastionVMIPprivate"
+  Hostname "$BastionVMIPprivate"
 \" > /home/"$BastionUserName"/.ssh/config
 " > $BastionVMUserData
 
@@ -408,3 +408,32 @@ az vm create \
   --admin-username $AppliUserName \
   --ssh-key-values "/home/$USER/.ssh/"$SshKeyName"_rsa.pub" \
   --zone $Zone
+
+
+# Add more administrators with ssh keys
+read -p "Nombre d'administrateurs à ajouter : " NumberAdmin
+if [ $NumberAdmin -gt 0 ]
+then
+    AdminArray=()
+    for (( i=1; i<=$NumberAdmin; i++))
+    do
+        read -p "Nom d'administrateur pour la personne ( $i ) : " UserNameTmp
+        read -p "Nom du fichier de sa clé publique : " KeyNameTmp
+        if [ ! -f $KeyNameTmp]
+            while [ ! -f $KeyNameTmp]
+                do
+                    read -p "Mauvais Nom du fichier de sa clé publique - recommencez : " KeyNameTmp
+                done
+        fi
+        ssh $LabelBastionIPName "sudo adduser --gecos '' --disabled-password "$UserNameTmp
+        Groupes=$(groups $BastionUserName | sed "s/"$BastionUserName" : //" | sed "s/"$BastionUserName" //" | sed "s/ /,/g")
+        sudo usermod -a -G $Groupes $UserNameTmp
+        KeyVarTmp=$(cat $KeyNameTmp)
+        sudo ssh -J $LabelBastionIPName $BastionUserName@$BastionVMIPprivate echo $KeyVarTmp >> "/home/"$UserNameTmp"/authorized_keys"
+        sudo ssh -J $LabelBastionIPName $BastionUserName@$BastionVMIPprivate sudo chmod 644 "/home/"$UserNameTmp"/authorized_keys"
+        
+        # sudo ssh-copy-id -i $KeyNameTmp $LabelBastionIPName
+        # KeyVarTmp="echo 'cat "$KeyNameTmp"'"
+        # sudo ssh -J $LabelBastionIPName $BastionUserName@$BastionVMIPprivate echo $KeyVarTmp >> 
+    done
+fi
