@@ -15,7 +15,12 @@ then
                     read -p "Mauvais Nom du fichier de sa clé publique - recommencez : " KeyNameTmp
                 done
         fi
-        ssh $LabelBastionIPName "sudo adduser --gecos '' --disabled-password --ingroup sudo "$UserNameTmp
+        ssh $LabelBastionIPName "sudo adduser --gecos '' --disabled-password "$UserNameTmp
+        Groupes=$(groups $BastionUserName | sed "s/"$BastionUserName" : //" | sed "s/"$BastionUserName" //" | sed "s/ /,/g")
+        sudo usermod -a -G $Groupes $UserNameTmp
+        KeyVarTmp=$(cat $KeyNameTmp)
+        sudo ssh -J $LabelBastionIPName $BastionUserName@$BastionVMIPprivate echo $KeyVarTmp >> "/home/"$UserNameTmp"/authorized_keys"
+        sudo ssh -J $LabelBastionIPName $BastionUserName@$BastionVMIPprivate sudo chmod 644 "/home/"$UserNameTmp"/authorized_keys"
         
         # sudo ssh-copy-id -i $KeyNameTmp $LabelBastionIPName
         # KeyVarTmp="echo 'cat "$KeyNameTmp"'"
