@@ -323,9 +323,11 @@ sudo systemctl restart sshd
 
 echo -e \"
 Host appli
-  Hostname "$BastionVMIPprivate"
+  Hostname "$AppliVMIPprivate"
 \" > /home/"$BastionUserName"/.ssh/config
 " > $BastionVMUserData
+
+cat $BastionVMUserData
 
 #VM Bastion Creation
 echo "VM Bastion Creation"
@@ -338,7 +340,7 @@ az vm create \
   --os-disk-name $OSDiskBastion \
   --os-disk-delete-option "Detach" \
   --os-disk-size-gb $OSDiskBastionSizeGB \
-  --user-data $BastionVMUserData \
+  --custom-data $BastionVMUserData \
   --vnet-name $VNet \
   --subnet $Subnet \
   --private-ip-address $BastionVMIPprivate \
@@ -354,6 +356,7 @@ AppliName=$PreName"VM-Appli"
 AppliUserName=$BastionUserName
 AppliVMSize="Standard_D2s_v3"
 AppliVMUserData="script-vm-appli.sh"
+AppliVMIPprivate="10.0.0.6"
 
 # User Data Creation script
 echo -e "
@@ -399,10 +402,10 @@ az vm create \
   --os-disk-name $OSDiskAppli \
   --os-disk-delete-option "Detach" \
   --os-disk-size-gb $OSDiskAppliSizeGB \
-  --user-data $AppliVMUserData \
+  --custom-data $AppliVMUserData \
   --vnet-name $VNet \
   --subnet $Subnet\
-  --private-ip-address "10.0.0.5" \
+  --private-ip-address $AppliVMIPprivate \
   --nsg $NsgAppliName \
   --public-ip-address $AppliIPName \
   --admin-username $AppliUserName \
@@ -410,30 +413,30 @@ az vm create \
   --zone $Zone
 
 
-# Add more administrators with ssh keys
-read -p "Nombre d'administrateurs à ajouter : " NumberAdmin
-if [ $NumberAdmin -gt 0 ]
-then
-    AdminArray=()
-    for (( i=1; i<=$NumberAdmin; i++))
-    do
-        read -p "Nom d'administrateur pour la personne ( $i ) : " UserNameTmp
-        read -p "Nom du fichier de sa clé publique : " KeyNameTmp
-        if [ ! -f $KeyNameTmp]
-            while [ ! -f $KeyNameTmp]
-                do
-                    read -p "Mauvais Nom du fichier de sa clé publique - recommencez : " KeyNameTmp
-                done
-        fi
-        ssh $LabelBastionIPName "sudo adduser --gecos '' --disabled-password "$UserNameTmp
-        Groupes=$(groups $BastionUserName | sed "s/"$BastionUserName" : //" | sed "s/"$BastionUserName" //" | sed "s/ /,/g")
-        sudo usermod -a -G $Groupes $UserNameTmp
-        KeyVarTmp=$(cat $KeyNameTmp)
-        sudo ssh -J $LabelBastionIPName $BastionUserName@$BastionVMIPprivate echo $KeyVarTmp >> "/home/"$UserNameTmp"/authorized_keys"
-        sudo ssh -J $LabelBastionIPName $BastionUserName@$BastionVMIPprivate sudo chmod 644 "/home/"$UserNameTmp"/authorized_keys"
+# # Add more administrators with ssh keys
+# read -p "Nombre d'administrateurs à ajouter : " NumberAdmin
+# if [ $NumberAdmin -gt 0 ]
+# then
+#     AdminArray=()
+#     for (( i=1; i<=$NumberAdmin; i++))
+#     do
+#         read -p "Nom d'administrateur pour la personne ( $i ) : " UserNameTmp
+#         read -p "Nom du fichier de sa clé publique : " KeyNameTmp
+#         if [ ! -f $KeyNameTmp]
+#             while [ ! -f $KeyNameTmp]
+#                 do
+#                     read -p "Mauvais Nom du fichier de sa clé publique - recommencez : " KeyNameTmp
+#                 done
+#         fi
+#         ssh $LabelBastionIPName "sudo adduser --gecos '' --disabled-password "$UserNameTmp
+#         Groupes=$(groups $BastionUserName | sed "s/"$BastionUserName" : //" | sed "s/"$BastionUserName" //" | sed "s/ /,/g")
+#         sudo usermod -a -G $Groupes $UserNameTmp
+#         KeyVarTmp=$(cat $KeyNameTmp)
+#         sudo ssh -J $LabelBastionIPName $BastionUserName@$BastionVMIPprivate echo $KeyVarTmp >> "/home/"$UserNameTmp"/authorized_keys"
+#         sudo ssh -J $LabelBastionIPName $BastionUserName@$BastionVMIPprivate sudo chmod 644 "/home/"$UserNameTmp"/authorized_keys"
         
-        # sudo ssh-copy-id -i $KeyNameTmp $LabelBastionIPName
-        # KeyVarTmp="echo 'cat "$KeyNameTmp"'"
-        # sudo ssh -J $LabelBastionIPName $BastionUserName@$BastionVMIPprivate echo $KeyVarTmp >> 
-    done
-fi
+#         # sudo ssh-copy-id -i $KeyNameTmp $LabelBastionIPName
+#         # KeyVarTmp="echo 'cat "$KeyNameTmp"'"
+#         # sudo ssh -J $LabelBastionIPName $BastionUserName@$BastionVMIPprivate echo $KeyVarTmp >> 
+#     done
+# fi
