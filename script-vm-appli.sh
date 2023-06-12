@@ -1,4 +1,3 @@
-
 #!/bin/bash -x
 
 sudo apt update
@@ -28,4 +27,3 @@ sudo a2ensite nextcloud.conf
 sudo systemctl restart apache2
 
 sudo awk '{ print } "0 =>" { print "1 => 'esan-preproduction-nextcloud.westeurope.cloudapp.azure.com'," }' /var/www/nextcloud/config/config.php
-

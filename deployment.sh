@@ -313,21 +313,16 @@ BastionVMUserData="script-vm-bastion.sh"
 BastionVMIPprivate="10.0.0.5"
 
 # User Data Creation script
-echo -e "
-#!/bin/bash -x
+echo -e "#!/bin/bash -x
 
 sudo apt update
 
 sudo sed 's/#Port 22/Port 10022/g' -i /etc/ssh/sshd_config
 sudo systemctl restart sshd
 
-echo -e \"
-Host appli
+echo -e \"Host appli
   Hostname "$AppliVMIPprivate"
-\" > /home/"$BastionUserName"/.ssh/config
-" > $BastionVMUserData
-
-cat $BastionVMUserData
+\" > /home/"$BastionUserName"/.ssh/config" > $BastionVMUserData
 
 #VM Bastion Creation
 echo "VM Bastion Creation"
@@ -340,7 +335,6 @@ az vm create \
   --os-disk-name $OSDiskBastion \
   --os-disk-delete-option "Detach" \
   --os-disk-size-gb $OSDiskBastionSizeGB \
-  --custom-data $BastionVMUserData \
   --vnet-name $VNet \
   --subnet $Subnet \
   --private-ip-address $BastionVMIPprivate \
@@ -359,8 +353,7 @@ AppliVMUserData="script-vm-appli.sh"
 AppliVMIPprivate="10.0.0.6"
 
 # User Data Creation script
-echo -e "
-#!/bin/bash -x
+echo -e "#!/bin/bash -x
 
 sudo apt update
 sudo apt -y install wget
@@ -388,8 +381,7 @@ sudo a2dissite 000-default.conf
 sudo a2ensite nextcloud.conf
 sudo systemctl restart apache2
 
-sudo awk '{ print } \"0 =>\" { print \"1 => '"$LabelAppliIPName".westeurope.cloudapp.azure.com',\" }' /var/www/nextcloud/config/config.php
-" > $AppliVMUserData
+sudo awk '{ print } \"0 =>\" { print \"1 => '"$LabelAppliIPName".westeurope.cloudapp.azure.com',\" }' /var/www/nextcloud/config/config.php" > $AppliVMUserData
 
 #VM Application Creation
 az vm create \
@@ -402,7 +394,6 @@ az vm create \
   --os-disk-name $OSDiskAppli \
   --os-disk-delete-option "Detach" \
   --os-disk-size-gb $OSDiskAppliSizeGB \
-  --custom-data $AppliVMUserData \
   --vnet-name $VNet \
   --subnet $Subnet\
   --private-ip-address $AppliVMIPprivate \
@@ -412,31 +403,48 @@ az vm create \
   --ssh-key-values "/home/$USER/.ssh/"$SshKeyName"_rsa.pub" \
   --zone $Zone
 
+sleep 5
 
-# # Add more administrators with ssh keys
-# read -p "Nombre d'administrateurs à ajouter : " NumberAdmin
-# if [ $NumberAdmin -gt 0 ]
-# then
-#     AdminArray=()
-#     for (( i=1; i<=$NumberAdmin; i++))
-#     do
-#         read -p "Nom d'administrateur pour la personne ( $i ) : " UserNameTmp
-#         read -p "Nom du fichier de sa clé publique : " KeyNameTmp
-#         if [ ! -f $KeyNameTmp]
-#             while [ ! -f $KeyNameTmp]
-#                 do
-#                     read -p "Mauvais Nom du fichier de sa clé publique - recommencez : " KeyNameTmp
-#                 done
-#         fi
-#         ssh $LabelBastionIPName "sudo adduser --gecos '' --disabled-password "$UserNameTmp
-#         Groupes=$(groups $BastionUserName | sed "s/"$BastionUserName" : //" | sed "s/"$BastionUserName" //" | sed "s/ /,/g")
-#         sudo usermod -a -G $Groupes $UserNameTmp
-#         KeyVarTmp=$(cat $KeyNameTmp)
-#         sudo ssh -J $LabelBastionIPName $BastionUserName@$BastionVMIPprivate echo $KeyVarTmp >> "/home/"$UserNameTmp"/authorized_keys"
-#         sudo ssh -J $LabelBastionIPName $BastionUserName@$BastionVMIPprivate sudo chmod 644 "/home/"$UserNameTmp"/authorized_keys"
+# Run Custom Datas in VM Bastion
+az vm run-command invoke \
+  --resource-group $ResourceGroup \
+  --name "VM-Bastion-Base" \
+  --command-id RunShellScript \
+  --scripts @$BastionVMUserData
+
+# Run Custom Datas in VM Application
+az vm run-command invoke \
+  --resource-group $ResourceGroup \
+  --name "VM-Appli-Base" \
+  --command-id RunShellScript \
+  --scripts @$AppliVMUserData
+
+
+# Add more administrators with ssh keys
+read -p "Nombre d'administrateurs à ajouter : " NumberAdmin
+if [ $NumberAdmin -gt 0 ]
+then
+    AdminArray=()
+    for (( i=1; i<=$NumberAdmin; i++))
+    do
+        read -p "Nom d'administrateur pour la personne ( $i ) : " UserNameTmp
+        read -p "Nom du fichier de sa clé publique : " KeyNameTmp
+        if [ ! -f $KeyNameTmp]
+        then
+            while [ ! -f $KeyNameTmp]
+                do
+                    read -p "Mauvais Nom du fichier de sa clé publique - recommencez : " KeyNameTmp
+                done
+        fi
+        ssh $LabelBastionIPName "sudo adduser --gecos '' --disabled-password "$UserNameTmp
+        Groupes=$(groups $BastionUserName | sed "s/"$BastionUserName" : //" | sed "s/"$BastionUserName" //" | sed "s/ /,/g")
+        sudo usermod -a -G $Groupes $UserNameTmp
+        KeyVarTmp=$(cat $KeyNameTmp)
+        sudo ssh -J $LabelBastionIPName $BastionUserName@$BastionVMIPprivate echo $KeyVarTmp >> "/home/"$UserNameTmp"/authorized_keys"
+        sudo ssh -J $LabelBastionIPName $BastionUserName@$BastionVMIPprivate sudo chmod 644 "/home/"$UserNameTmp"/authorized_keys"
         
-#         # sudo ssh-copy-id -i $KeyNameTmp $LabelBastionIPName
-#         # KeyVarTmp="echo 'cat "$KeyNameTmp"'"
-#         # sudo ssh -J $LabelBastionIPName $BastionUserName@$BastionVMIPprivate echo $KeyVarTmp >> 
-#     done
-# fi
+        # sudo ssh-copy-id -i $KeyNameTmp $LabelBastionIPName
+        # KeyVarTmp="echo 'cat "$KeyNameTmp"'"
+        # sudo ssh -J $LabelBastionIPName $BastionUserName@$BastionVMIPprivate echo $KeyVarTmp >> 
+    done
+fi
